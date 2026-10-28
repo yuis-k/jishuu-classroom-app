@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>自習教室 配置アプリ</title>
+<style>
+:root{font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;color:#202938;background:#f4f6fa;--panel:#fff;--line:#dce2ea;--muted:#657286;--accent:#2459a9;--soft:#eaf1ff}
+@media(prefers-color-scheme:dark){:root{color:#e8edf5;background:#111827;--panel:#1b2432;--line:#354154;--muted:#a8b4c5;--accent:#83b1ff;--soft:#253958}}
+*{box-sizing:border-box}body{margin:0}header{background:var(--panel);border-bottom:1px solid var(--line);padding:14px 18px;display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;position:sticky;top:0;z-index:5}h1{font-size:20px;margin:0}small,.muted{color:var(--muted)}button,input,select,textarea{font:inherit}button{border:1px solid var(--line);background:var(--panel);color:inherit;border-radius:9px;padding:8px 12px;cursor:pointer}button.primary{background:var(--accent);color:white;border-color:var(--accent)}button:disabled{opacity:.45;cursor:not-allowed}.wrap{padding:16px;max-width:1800px;margin:auto}.tabs{display:flex;gap:6px;margin-bottom:14px;overflow:auto}.tabs button.active{background:var(--soft);border-color:var(--accent);font-weight:700}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}.table-scroll{overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:10px;background:var(--panel)}table{border-collapse:separate;border-spacing:0;min-width:100%;font-size:13px}th,td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;vertical-align:top}th{background:var(--soft);position:sticky;top:0;z-index:2;white-space:nowrap}th:first-child,td:first-child{position:sticky;left:0;z-index:3;background:var(--panel);min-width:110px}th:first-child{z-index:4;background:var(--soft)}td.slot{min-width:150px;width:150px;height:112px}.cell{width:100%;height:100%;min-height:96px;text-align:left;white-space:normal;padding:7px;border-radius:7px;display:block}.cell.outside{background:#8993a11a;color:var(--muted)}.cell.available{border-style:dashed;color:var(--muted)}.cell.has{background:var(--soft)}.cell.warn{border:2px solid #c83e4d;background:#c83e4d12}.cell.check{border:2px solid #c48a19;background:#c48a1912}.cell .names{font-weight:700;margin:4px 0}.cell .alerts{color:#c83e4d;font-weight:700}.badge{display:inline-block;border-radius:99px;padding:2px 7px;background:var(--soft);font-size:11px}.summary{display:flex;gap:12px;flex-wrap:wrap}.summary .panel{margin:0;flex:1;min-width:140px}.danger{color:#c83e4d}.warning{color:#b67b0b}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:8px;padding:9px;background:var(--panel);color:inherit;width:100%}.checklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:6px}.checklist label{padding:7px;border:1px solid var(--line);border-radius:8px}.staffbuttons{display:flex;flex-wrap:wrap;gap:7px}.staffbtn{text-align:left;min-width:145px}.staffbtn.selected{border-color:var(--accent);background:var(--soft)}.staffbtn small{display:block}.overlay{position:fixed;inset:0;background:#0008;z-index:10;display:flex;align-items:center;justify-content:center;padding:12px}.modal{background:var(--panel);color:inherit;border-radius:14px;width:min(780px,100%);max-height:94vh;overflow:auto;padding:18px;box-shadow:0 15px 60px #0003}.modal h2{margin-top:0}.modal-actions{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:14px}.note{font-size:12px;color:var(--muted)}.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.pill{border-radius:7px;padding:3px 6px;background:var(--panel);border:1px solid var(--line);font-size:11px}.alertbox{padding:10px;border-radius:9px;background:#c48a1912;border:1px solid #c48a1966;margin-bottom:10px}.errorbox{padding:10px;border-radius:9px;background:#c83e4d12;border:1px solid #c83e4d66;margin-bottom:10px}.hidden{display:none!important}
+@media(max-width:600px){header{padding:10px}.wrap{padding:9px}h1{font-size:17px}.panel{padding:10px}td.slot{min-width:138px;width:138px}th:first-child,td:first-child{min-width:90px}.toolbar button{flex:1}}
+</style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<header><div><h1>📋 自習教室 配置アプリ</h1><small id="updated">最終更新 —</small> <span class="badge" id="modeBadge">デモモード</span></div><div class="inline"><button id="exportBtn">Excel出力（CSV）</button></div></header>
+<main class="wrap">
+<div class="tabs"><button class="active" data-tab="placements">配置表</button><button data-tab="settings">設定</button><button data-tab="availability">出勤可能日</button><button data-tab="staffview">担当者別</button></div>
+<div id="notice"></div>
+<section id="placements">
+<div class="toolbar"><button id="createBtn" class="primary">開催日を一括作成</button><button id="autoBtn">自動割り振り</button><button id="confirmBtn">自動分を確定</button><button id="undoBtn">自動分を取り消す</button></div>
+<div class="summary" id="summary"></div><p class="note">マスを押すと編集できます。対象期間外の日も開催にできます。赤＝要対応、黄＝確認。</p>
+<div class="table-scroll"><table id="placementTable"></table></div>
+</section>
+<section id="settings" class="hidden">
+<div class="panel"><h2>基本ルール</h2><div class="grid" id="rules"></div><button class="primary" id="saveRules">設定を保存</button></div>
+<div class="panel"><h2>担当者</h2><div class="table-scroll"><table id="staffTable"></table></div><div class="toolbar" style="margin-top:10px"><button id="addStaff">担当者を追加</button></div></div>
+<div class="panel"><h2>中学校のテスト日程</h2><p class="note">例：11/13,11/16-18。年は基本ルールの年を使います。</p><div class="table-scroll"><table id="testsTable"></table></div><button id="saveTests" class="primary" style="margin-top:10px">テスト日程を保存</button></div>
+<div class="panel"><h2>校舎</h2><div id="campusSettings" class="grid"></div><button id="addCampus" style="margin-top:10px">校舎を追加</button><button id="saveCampuses" class="primary" style="margin-top:10px">校舎設定を保存</button></div>
+<div class="panel"><h2>共有データ設定</h2><p class="note">複数端末で共有するにはSupabaseプロジェクトのURLと公開用 anon key を設定し、READMEのSQLを実行してください。デモモードではこのブラウザ内だけに保存されます。</p><div class="grid"><label class="field">Supabase URL<input id="supabaseUrl" placeholder="https://xxxx.supabase.co"></label><label class="field">Supabase anon key<input id="supabaseKey" placeholder="eyJ..."></label></div><button id="connectBtn" class="primary">共有データに接続</button><span id="connectStatus" class="note"></span></div>
+</section>
+<section id="availability" class="hidden"><div class="panel"><h2>出勤可能日</h2><div class="inline"><label>時間（任意） <input id="availTime" placeholder="18-21" style="width:120px"></label><span class="note">日付のマスを押して登録／解除します。</span></div></div><div class="table-scroll"><table id="availabilityTable"></table></div></section>
+<section id="staffview" class="hidden"><div class="panel"><h2>担当者別</h2><div class="table-scroll"><table id="staffViewTable"></table></div></div></section>
+</main>
+<div id="modalRoot"></div>
+<script>
+const campusSeed=[
+["takemura","竹村","竜神、上郷、高岡、前林、若園、みよし南","岡崎、大橋、篠崎、川原","岡崎"],
+["toyotakita","豊田北","浄水、保見、猿投、逢妻、井郷、みよし北、三好丘、梅坪台","澤田、大橋、篠崎、石川","篠崎"],
+["takahashi","高橋","高橋、美里、松平、猿投台、益富、足助、崇化館、井郷","澤田、大橋、野場、川原","澤田"],
+["miyoshi","三好","三好、みよし北、みよし南","岡崎、大橋、篠崎、石川","篠崎"],
+["obayashi","大林","末野原、竜神、豊南","澤田、大橋、野場、石川","石川"],
+["maeyama","前山","豊南、益富、松平、美里、朝日丘、旭、小原","岡崎、大橋、野場、石川","石川"],
+["okazaki","岡崎","葵、岡崎北、岩津、新香山、常磐、附属、城北、甲山","岡崎、大橋、野場、川原","岡崎"],
+["minamianjo","南安城","安城南、安祥、安城西、安城北","澤田、篠崎、川原","篠崎"]];
+const staffSeed=[["sawada","澤田","英語"],["okazaki","岡崎","英語"],["ohashi","大橋","英語"],["shinozaki","篠崎","数学"],["noba","野場","数学"],["ishikawa","石川","理科"],["kawahara","川原","理科"],["yamada","山田",""]];
+const testSeed={};
+function parseDates(s,year){let out=[];if(!s.trim())return out;for(const p of s.split(/[、,，]/)){let m=p.trim().match(/^(\d{1,2})\/(\d{1,2})(?:-(\d{1,2}))?$/);if(!m)throw Error("日程の書き方を確認してください："+p);let mo=+m[1],a=+m[2],b=m[3]?+m[3]:a;for(let d=a;d<=b;d++){let dt=new Date(year,mo-1,d);if(dt.getMonth()!==mo-1||dt.getDate()!==d)throw Error("存在しない日付："+p);out.push(fmt(dt));}}return [...new Set(out)].sort()}
+const dateToMD=d=>{let x=new Date(d+"T12:00:00");return (x.getMonth()+1)+"/"+x.getDate()};
+const fmt=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const weekday=d=>["日","月","火","水","木","金","土"][new Date(d+"T12:00:00").getDay()];
+const idify=s=>s.toLowerCase().replace(/[^a-z0-9]/g,"")||"new"+Date.now();
+let state={rules:{threshold:42,leadDays:14,maxCampusPerDay:2,weekday:"18-21",weekend:"13-16:30",year:2026},campuses:[],staff:[],tests:{},availability:{},slots:{},updated:new Date().toISOString()};
+function seed(){state.staff=staffSeed.map(([id,name,subject])=>({id,name,subject,type:"正社員"}));state.campuses=campusSeed.map(([id,name,schools,members,head])=>({id,name,schools:schools.split("、").map(name=>({name,count:null})),members:members.split("、").map(n=>state.staff.find(s=>s.name===n)?.id||n),head:state.staff.find(s=>s.name===head)?.id||head}));
+const groups=[["新香山","11/13,11/16-18"],["末野原、前林、高岡、若園、上郷、猿投、みよし北、逢妻、井郷、浄水、三好丘、高橋、美里、猿投台、崇化館、足助、三好、みよし南、豊南、益富、松平、朝日丘、小原、葵、岡崎北、岩津、城北、附属","11/16-18"],["竜神、梅坪台、保見、常磐、安城南","11/17-18"],["旭","11/17-19"],["安祥、安城北、安城西","11/18"],["甲山","11/18-20"]];
+state.tests={};for(const [names,dates] of groups)for(const n of names.split("、"))state.tests[n]=dates;
+}
+function load(){try{let x=localStorage.getItem("jishukyoshitsu_v1");if(x)state={...state,...JSON.parse(x)};else seed()}catch(e){seed()} }
+function save(){state.updated=new Date().toISOString();try{localStorage.setItem("jishukyoshitsu_v1",JSON.stringify(state))}catch(e){};document.getElementById("updated").textContent="最終更新 "+new Date(state.updated).toLocaleString("ja-JP",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"});renderAll()}
+function allDates(){let ds=new Set();Object.values(state.tests).forEach(s=>{try{parseDates(s,state.rules.year).forEach(d=>ds.add(d))}catch(e){}});let arr=[...ds].sort();let min=arr.length?new Date(arr[0]+"T12:00:00"):new Date(state.rules.year,10,1),max=arr.length?new Date(arr[arr.length-1]+"T12:00:00"):new Date(state.rules.year,10,30);min.setDate(min.getDate()-state.rules.leadDays);let dates=[];for(let d=new Date(min);d<=max;d.setDate(d.getDate()+1))dates.push(fmt(new Date(d)));Object.values(state.slots).forEach(s=>{if(!dates.includes(s.date))dates.push(s.date)});return dates.sort()}
+function key(c,d){return c+"|"+d}
+function schoolDates(n){try{return parseDates(state.tests[n]||"",state.rules.year)}catch(e){return []}}
+function period(c,d){let schools=c.schools.filter(s=>{let ds=schoolDates(s.name);if(!ds.length)return false;let start=new Date(Math.min(...ds.map(x=>+new Date(x+"T12:00:00"))));start.setDate(start.getDate()-state.rules.leadDays);let end=new Date(Math.max(...ds.map(x=>+new Date(x+"T12:00:00"))));end.setDate(end.getDate()-1);let dt=new Date(d+"T12:00:00");return dt>=start&&dt<=end});return schools}
+function calc(c,slot,d){let names=slot&&slot.targets&&slot.targets.length?slot.targets:period(c,d).map(s=>s.name);let missing=[],count=0;for(let n of names){let sc=c.schools.find(s=>s.name===n);if(sc&&sc.count!==null&&sc.count!==""&&Number.isFinite(+sc.count))count+=+sc.count;else missing.push(n)}return {names,count,missing,required:count>=state.rules.threshold?2:1}}
+function staffByName(n){return state.staff.find(s=>s.name===n)}
+function timeRange(t){if(!t)return null;t=t.replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248)).replace(/[：]/g,":").replace(/[～〜−—]/g,"-").trim();let m=t.match(/^(\d{1,2})(?::(\d{1,2}))?\s*-\s*(\d{1,2})(?::(\d{1,2}))?$/);if(!m)return null;return [+m[1]*60+ +(m[2]||0),+m[3]*60+ +(m[4]||0)]}
+function overlap(a,b){let x=timeRange(a),y=timeRange(b);return !x||!y||(x[0]<y[1]&&y[0]<x[1])}
+function warnings(slot,c,d){if(!slot)return [];let out=[],calcx=calc(c,slot,d);if((slot.staff||[]).length<calcx.required)out.push({level:"red",text:`あと${calcx.required-(slot.staff||[]).length}名必要`});if(!timeRange(slot.time))out.push({level:"yellow",text:"時間の書き方を確認してください（例 18-21）"});if(calcx.missing.length)out.push({level:"yellow",text:"人数未登録："+calcx.missing.join("・")});let daySlots=Object.values(state.slots).filter(s=>s.date===d&&s.staff);for(let id of slot.staff||[]){let st=state.staff.find(s=>s.id===id);if(st&&st.type==="正社員"&&!state.availability[id+"|"+d])out.push({level:"yellow",text:st.name+"さんは出勤可能日に入っていません"});let others=daySlots.filter(s=>s!==slot&&s.staff.includes(id));if(others.some(s=>overlap(slot.time,s.time))){let o=others.find(s=>overlap(slot.time,s.time));out.push({level:"red",text:(st?.name||id)+"さんが同じ時間に"+state.campuses.find(x=>x.id===o.campus)?.name+"にも入っています"})}if(others.length+1>state.rules.maxCampusPerDay)out.push({level:"red",text:(st?.name||id)+"さんがこの日"+(others.length+1)+"校舎（上限"+state.rules.maxCampusPerDay+"）"})}if((slot.staff||[]).length>=2){let ss=slot.staff.map(id=>state.staff.find(s=>s.id===id)).filter(Boolean);if(ss.length>=2&&ss[0].subject&&ss[0].subject===ss[1].subject)out.push({level:"yellow",text:`教科がかぶっています（${ss[0].name}・${ss[1].name}：${ss[0].subject}）`})}return out}
+function slotInfo(c,d){let s=state.slots[key(c.id,d)];if(!s)return null;return {...s,...calc(c,s,d)}}
+function renderAll(){renderPlacement();renderSettings();renderAvailability();renderStaffView()}
+function renderPlacement(){let dates=allDates(),testsByDate={};Object.entries(state.tests).forEach(([n,v])=>schoolDates(n).forEach(d=>testsByDate[d]=(testsByDate[d]||0)+1));let html="<thead><tr><th>校舎</th>"+dates.map(d=>`<th style="color:${weekday(d)==="土"?"#3781d6":weekday(d)==="日"?"#d54b58":"inherit"}">${dateToMD(d)}<br>${weekday(d)}${testsByDate[d]?`<br>テスト${testsByDate[d]}校`:""}</th>`).join("")+"</tr></thead><tbody>";
+for(let c of state.campuses){html+=`<tr><td><b>${c.name}</b></td>`;for(let d of dates){let s=state.slots[key(c.id,d)],p=period(c,d);if(!s&&!p.length){html+=`<td class="slot"><button class="cell outside" data-edit="${c.id}|${d}">＋</button></td>`;continue}if(!s){html+=`<td class="slot"><button class="cell available" data-edit="${c.id}|${d}">＋<br><small>${p.map(x=>x.name).join("・")}</small></button></td>`;continue}let inf=slotInfo(c,d),w=warnings(s,c,d),red=w.some(x=>x.level==="red"),yellow=w.some(x=>x.level==="yellow");let staffNames=(s.staff||[]).map(id=>{let st=state.staff.find(x=>x.id===id);return (st?.id===c.head?"◎":"")+(st?.name||id)+(st?.subject?"("+st.subject[0]+")":"")}).join("、");html+=`<td class="slot"><button class="cell has ${red?"warn":yellow?"check":""}" data-edit="${c.id}|${d}"><b>${s.type!=="自習教室"?s.type+" ":""}${s.time||"時間不明"}</b><div class="names">${staffNames||'<span class="danger">未配置</span>'}</div><small>${inf.names.join("・")||"対象未設定"} / ${inf.count}人</small>${s.autoStaff?.length?`<div><small>自動：${s.autoStaff.map(id=>state.staff.find(x=>x.id===id)?.name||id).join("、")}</small></div>`:""}${w.length?`<div class="alerts">${w[0].text}</div>`:""}${s.note?`<small>📝 ${s.note}</small>`:""}</button></td>`}html+="</tr>"}document.getElementById("placementTable").innerHTML=html+"</tbody>";
+document.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{let [c,d]=b.dataset.edit.split("|");editSlot(c,d)});
+let issues=0,checks=0;Object.values(state.slots).forEach(s=>{let c=state.campuses.find(x=>x.id===s.campus);if(!c)return;warnings(s,c,s.date).forEach(w=>w.level==="red"?issues++:checks++)});document.getElementById("summary").innerHTML=`<div class="panel"><b class="danger">要対応 ${issues}件</b></div><div class="panel"><b class="warning">確認 ${checks}件</b></div><div class="panel"><b>開催枠 ${Object.keys(state.slots).length}件</b></div>`}
+function renderSettings(){let r=state.rules;document.getElementById("rules").innerHTML=[["threshold","2名配置にする人数"],["leadDays","テスト何日前から"],["maxCampusPerDay","1日の校舎数上限"],["weekday","平日の標準時間"],["weekend","土日の標準時間"],["year","テスト日程の年"]].map(([k,l])=>`<label class="field">${l}<input data-rule="${k}" value="${r[k]}" ${["weekday","weekend"].includes(k)?"":"type=number"}></label>`).join("");
+document.getElementById("staffTable").innerHTML="<thead><tr><th>名前</th><th>教科</th><th>区分</th><th></th></tr></thead><tbody>"+state.staff.map((s,i)=>`<tr><td><input data-staff="${i}" data-field="name" value="${s.name}"></td><td><input data-staff="${i}" data-field="subject" value="${s.subject||""}"></td><td><select data-staff="${i}" data-field="type"><option ${s.type==="正社員"?"selected":""}>正社員</option><option ${s.type==="アルバイト"?"selected":""}>アルバイト</option></select></td><td><button data-delstaff="${i}">削除</button></td></tr>`).join("")+"</tbody>";
+document.getElementById("testsTable").innerHTML="<thead><tr><th>中学校</th><th>テスト日程</th></tr></thead><tbody>"+Object.entries(state.tests).sort().map(([n,v],i)=>`<tr><td>${n}</td><td><input style="min-width:200px" data-test="${n}" value="${v}"></td></tr>`).join("")+"</tbody>";
+document.getElementById("campusSettings").innerHTML=state.campuses.map((c,i)=>`<div class="panel"><label class="field">校舎名<input data-campus="${i}" data-field="name" value="${c.name}"></label><label class="field">中学校（1行に1校、人数は「竜神:30」）<textarea data-campus="${i}" data-field="schools" rows="5">${c.schools.map(s=>s.name+(s.count!==null?":"+s.count:"")).join("\n")}</textarea></label><label class="field">担当者（カンマ区切り）<input data-campus="${i}" data-field="members" value="${c.members.map(id=>state.staff.find(s=>s.id===id)?.name||id).join(",")}"></label><label class="field">校舎長<select data-campus="${i}" data-field="head">${state.staff.map(s=>`<option value="${s.id}" ${c.head===s.id?"selected":""}>${s.name}</option>`).join("")}</select></label></div>`).join("");
+document.querySelectorAll("[data-rule]").forEach(el=>el.onchange=()=>{let k=el.dataset.rule;state.rules[k]=["weekday","weekend"].includes(k)?el.value:Number(el.value)});
+document.querySelectorAll("[data-staff]").forEach(el=>el.onchange=()=>{state.staff[+el.dataset.staff][el.dataset.field]=el.value});
+document.querySelectorAll("[data-delstaff]").forEach(el=>el.onclick=()=>{if(confirm("担当者を削除しますか？")){state.staff.splice(+el.dataset.delstaff,1);renderSettings()}});
+document.querySelectorAll("[data-test]").forEach(el=>el.onchange=()=>{state.tests[el.dataset.test]=el.value});
+document.querySelectorAll("[data-campus]").forEach(el=>el.onchange=()=>{let c=state.campuses[+el.dataset.campus],f=el.dataset.field;if(f==="name")c.name=el.value;if(f==="head")c.head=el.value;if(f==="members")c.members=el.value.split(/[,、]/).map(n=>state.staff.find(s=>s.name.trim()===n.trim())?.id||n.trim()).filter(Boolean);if(f==="schools")c.schools=el.value.split("\n").map(x=>{let m=x.trim().match(/^(.+?)(?::(\d+))?$/);return m&&m[1]?{name:m[1].trim(),count:m[2]===undefined?null:+m[2]}:null}).filter(Boolean)});
+}
+function editSlot(cid,d){let c=state.campuses.find(x=>x.id===cid),old=state.slots[key(cid,d)],s=old?JSON.parse(JSON.stringify(old)):{campus:cid,date:d,type:"自習教室",time:[0,6].includes(new Date(d+"T12:00:00").getDay())?state.rules.weekend:state.rules.weekday,staff:[],autoStaff:[],targets:[],note:""};let explicit=!!(s.targets&&s.targets.length);let schools=explicit?s.targets.map(n=>c.schools.find(x=>x.name===n)).filter(Boolean):period(c,d);let calcx=calc(c,s,d);
+const root=document.getElementById("modalRoot");root.innerHTML=`<div class="overlay"><div class="modal"><h2>${c.name}　${dateToMD(d)}（${weekday(d)}）</h2><div class="grid"><label class="field">種類<select id="eType">${["自習教室","勉強会","学判","online","その他"].map(t=>`<option ${s.type===t?"selected":""}>${t}</option>`).join("")}</select></label><label class="field">時間<input id="eTime" value="${s.time||""}" placeholder="18-21"></label></div><h3>対象中学校</h3><p class="note">何も選ばない場合は、その日の対象期間に入っている学校が自動で対象になります。</p><div class="checklist" id="eSchools">${c.schools.map(sc=>{let active=explicit?s.targets.includes(sc.name):period(c,d).some(x=>x.name===sc.name);return `<label><input type="checkbox" value="${sc.name}" ${active?"checked":""} data-school> ${sc.name} <small>人数：${sc.count??"未登録"} / テスト：${schoolDates(sc.name).map(dateToMD).join("・")||"未登録"}</small></label>`}).join("")}</div><div id="eCount" class="alertbox"></div><h3>担当者</h3><div class="staffbuttons" id="eStaff"></div><label class="field" style="margin-top:12px">メモ<textarea id="eNote" rows="2">${s.note||""}</textarea></label><div id="eWarnings"></div><div class="modal-actions"><div><button id="deleteSlot" class="${old?"":"hidden"}">開催をやめる</button></div><div><button id="closeModal">閉じる</button> <button id="saveSlot" class="primary">${old?"保存":"開催にする"}</button></div></div></div></div>`;
+function currentTargets(){let chosen=[...root.querySelectorAll("[data-school]:checked")].map(x=>x.value);return chosen.length===c.schools.length||chosen.length===0?[]:chosen}
+function redraw(){let targets=currentTargets(),tmp={...s,targets};let z=calc(c,tmp,d);document.getElementById("eCount").textContent=`対象：${z.names.join("・")||"なし"}　${z.count}人 → 必要な担当 ${z.required}名 ／ 今 ${s.staff.length}名` ;
+let availStaff=[...state.staff].sort((a,b)=>{let rank=x=>x.id===c.head?0:c.members.includes(x.id)?1:2;return rank(a)-rank(b)||a.name.localeCompare(b.name,"ja")});document.getElementById("eStaff").innerHTML=availStaff.map(st=>{let selected=s.staff.includes(st.id),av=state.availability[st.id+"|"+d],others=Object.values(state.slots).filter(x=>x.date===d&&x.campus!==cid&&(x.staff||[]).includes(st.id)),clash=others.some(x=>overlap(s.time,x.time));return `<button class="staffbtn ${selected?"selected":""}" data-person="${st.id}">${selected?"☑":"☐"} ${st.id===c.head?"◎ ":""}${st.name}<small>${c.members.includes(st.id)?"この校舎の担当":"他校舎"}・${st.subject||"教科未定"}</small><small>${av?"○ "+av:"可能日でない"}</small><small>${others.length?"他："+others.map(x=>(state.campuses.find(y=>y.id===x.campus)?.name||"")+ " "+x.time).join("、"):"他の担当なし"}${clash?" ⚠時間重複":""}</small></button>`}).join("");document.querySelectorAll("[data-person]").forEach(b=>b.onclick=()=>{let id=b.dataset.person;s.staff.includes(id)?s.staff=s.staff.filter(x=>x!==id):s.staff.push(id);redraw()});
+let w=warnings({...s,targets},c,d);document.getElementById("eWarnings").innerHTML=w.map(x=>`<div class="${x.level==="red"?"errorbox":"alertbox"}">${x.text}</div>`).join("")||""}
+root.querySelectorAll("[data-school]").forEach(el=>el.onchange=redraw);root.querySelector("#eTime").oninput=()=>{s.time=root.querySelector("#eTime").value;redraw()};redraw();
+root.querySelector("#closeModal").onclick=()=>root.innerHTML="";root.querySelector("#saveSlot").onclick=()=>{s.type=root.querySelector("#eType").value;s.time=root.querySelector("#eTime").value;s.note=root.querySelector("#eNote").value;s.targets=currentTargets();s.autoStaff=[];if(!s.staff.length&&!confirm("担当者が未配置です。このまま保存しますか？"))return;state.slots[key(cid,d)]=s;root.innerHTML="";save()};
+root.querySelector("#deleteSlot").onclick=()=>{if(confirm("開催をやめますか？もう一度確認します。")&&confirm("この開催枠を削除します。よろしいですか？")){delete state.slots[key(cid,d)];root.innerHTML="";save()}};
+}
+function createBulk(){let root=document.getElementById("modalRoot");root.innerHTML=`<div class="overlay"><div class="modal"><h2>開催日を一括作成</h2><p>対象期間内で、まだ開催になっていない日だけを作成します。</p><h3>校舎</h3><div class="checklist">${state.campuses.map(c=>`<label><input type="checkbox" data-bcamp value="${c.id}" checked> ${c.name}</label>`).join("")}</div><h3>曜日</h3><div class="checklist">${["月","火","水","木","金","土","日"].map((w,i)=>`<label><input type="checkbox" data-bday value="${i}" ${i<5?"checked":""}> ${w}</label>`).join("")}</div><div class="grid"><label class="field">平日の時間<input id="bWeek" value="${state.rules.weekday}"></label><label class="field">土日の時間<input id="bWeekend" value="${state.rules.weekend}"></label></div><div id="bCount" class="alertbox"></div><div class="modal-actions"><button id="bClose">閉じる</button><button id="bCreate" class="primary">開催枠を作成</button></div></div></div>`;
+function count(){let cs=[...root.querySelectorAll("[data-bcamp]:checked")].map(x=>x.value),days=[...root.querySelectorAll("[data-bday]:checked")].map(x=>+x.value),n=0;for(let cid of cs){let c=state.campuses.find(x=>x.id===cid);for(let d of allDates())if(period(c,d).length&&!state.slots[key(cid,d)]&&days.includes((new Date(d+"T12:00:00").getDay()+6)%7))n++}root.querySelector("#bCount").textContent=`新しく作成する枠：${n}件`;return n}
+root.querySelectorAll("[data-bcamp],[data-bday]").forEach(x=>x.onchange=count);count();root.querySelector("#bClose").onclick=()=>root.innerHTML="";root.querySelector("#bCreate").onclick=()=>{let n=count();if(!confirm(`${n}枠を新しく作ります。よろしいですか？`))return;let cs=[...root.querySelectorAll("[data-bcamp]:checked")].map(x=>x.value),days=[...root.querySelectorAll("[data-bday]:checked")].map(x=>+x.value);for(let cid of cs){let c=state.campuses.find(x=>x.id===cid);for(let d of allDates())if(period(c,d).length&&!state.slots[key(cid,d)]&&days.includes((new Date(d+"T12:00:00").getDay()+6)%7)){let we=[0,6].includes(new Date(d+"T12:00:00").getDay());state.slots[key(cid,d)]={campus:cid,date:d,type:"自習教室",time:we?root.querySelector("#bWeekend").value:root.querySelector("#bWeek").value,staff:[],autoStaff:[],targets:[],note:""}}}root.innerHTML="";save()};
+}
+function autoAssign(){let slots=Object.values(state.slots).sort((a,b)=>a.date.localeCompare(b.date)||calc(state.campuses.find(c=>c.id===b.campus),b,b.date).count-calc(state.campuses.find(c=>c.id===a.campus),a,a.date).count);let added=0,remaining=0;for(let s of slots){let c=state.campuses.find(x=>x.id===s.campus);if(!c)continue;let z=calc(c,s,s.date),need=Math.max(0,z.required-s.staff.length);while(need>0){let candidates=state.staff.filter(st=>st.type==="正社員"&&state.availability[st.id+"|"+s.date]!==undefined&&(!state.availability[st.id+"|"+s.date]||!timeRange(state.availability[st.id+"|"+s.date])||(()=>{let a=timeRange(state.availability[st.id+"|"+s.date]),b=timeRange(s.time);return a&&b&&a[0]<=b[0]&&a[1]>=b[1]})())&&!Object.values(state.slots).some(o=>o!==s&&o.date===s.date&&(o.staff||[]).includes(st.id)&&overlap(o.time,s.time))&&Object.values(state.slots).filter(o=>o.date===s.date&&(o.staff||[]).includes(st.id)).length<state.rules.maxCampusPerDay&&!s.staff.includes(st.id));candidates=candidates.filter(st=>s.staff.every(id=>state.staff.find(x=>x.id===id)?.subject!==st.subject||!st.subject));candidates.sort((a,b)=>{let rank=st=>z.required>=2?(st.id===c.head?0:c.members.includes(st.id)?1:2):(c.members.includes(st.id)?0:1);let ra=rank(a)-rank(b);if(ra)return ra;let ca=Object.values(state.slots).filter(x=>(x.staff||[]).includes(a.id)).length,cb=Object.values(state.slots).filter(x=>(x.staff||[]).includes(b.id)).length;return ca-cb});if(!candidates.length)break;let chosen=candidates[0];s.staff.push(chosen.id);s.autoStaff=s.autoStaff||[];s.autoStaff.push(chosen.id);added++;need--}if(need>0)remaining++}if(confirm(`${added}人分を入れます。足りない枠が${remaining}件残ります。実行しますか？`))save()}
+function renderAvailability(){let dates=allDates(),html="<thead><tr><th>担当者</th>"+dates.map(d=>`<th>${dateToMD(d)}<br>${weekday(d)}</th>`).join("")+"<th>日数</th></tr></thead><tbody>";for(let s of state.staff){let n=0;html+=`<tr><td>${s.name}</td>`;for(let d of dates){let k=s.id+"|"+d,v=state.availability[k];if(v!==undefined)n++;html+=`<td><button data-av="${k}" style="min-width:55px">${v!==undefined?"○"+(v?"<br>"+v:""):"—"}</button></td>`}html+=`<td>${n}</td></tr>`}html+="<tr><th>出勤可能な正社員</th>"+dates.map(d=>`<td>${state.staff.filter(s=>s.type==="正社員"&&state.availability[s.id+"|"+d]!==undefined).length}</td>`).join("")+"<td>—</td></tr></tbody>";document.getElementById("availabilityTable").innerHTML=html;document.querySelectorAll("[data-av]").forEach(b=>b.onclick=()=>{let k=b.dataset.av;if(state.availability[k]!==undefined)delete state.availability[k];else state.availability[k]=document.getElementById("availTime").value.trim();save()})}
+function renderStaffView(){let dates=allDates(),html="<thead><tr><th>担当者</th>"+dates.map(d=>`<th>${dateToMD(d)}<br>${weekday(d)}</th>`).join("")+"<th>担当回数</th><th>出勤可能日数</th></tr></thead><tbody>";for(let st of state.staff){let count=0,avail=Object.keys(state.availability).filter(k=>k.startsWith(st.id+"|")).length;html+=`<tr><td>${st.name}</td>`;for(let d of dates){let ss=Object.values(state.slots).filter(s=>s.date===d&&(s.staff||[]).includes(st.id));count+=ss.length;let red=ss.some(s=>Object.values(state.slots).some(o=>o!==s&&o.date===d&&(o.staff||[]).includes(st.id)&&overlap(o.time,s.time)));html+=`<td style="${red?"background:#c83e4d22":""}">${ss.map(s=>(state.campuses.find(c=>c.id===s.campus)?.name||"")+" "+s.time).join("<br>")}</td>`}html+=`<td>${count}</td><td>${avail}</td></tr>`}document.getElementById("staffViewTable").innerHTML=html+"</tbody>"}
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-tab]").forEach(x=>x.classList.toggle("active",x===b));["placements","settings","availability","staffview"].forEach(x=>document.getElementById(x).classList.toggle("hidden",x!==({placements:"placements",settings:"settings",availability:"availability",staffview:"staffview"}[b.dataset.tab])));});
+document.getElementById("saveRules").onclick=()=>{try{Object.entries(state.tests).forEach(([n,v])=>parseDates(v,state.rules.year));save();alert("基本ルールを保存しました。")}catch(e){alert(e.message)}};
+document.getElementById("saveTests").onclick=()=>{try{document.querySelectorAll("[data-test]").forEach(el=>{parseDates(el.value,state.rules.year);state.tests[el.dataset.test]=el.value});save();alert("テスト日程を保存しました。")}catch(e){alert(e.message)}};
+document.getElementById("saveCampuses").onclick=()=>{save();alert("校舎設定を保存しました。")};
+document.getElementById("addStaff").onclick=()=>{let n=prompt("担当者名");if(!n)return;state.staff.push({id:idify(n)+Date.now().toString().slice(-3),name:n,subject:"",type:"正社員"});renderSettings()};
+document.getElementById("addCampus").onclick=()=>{let n=prompt("校舎名");if(!n)return;state.campuses.push({id:idify(n)+Date.now().toString().slice(-3),name:n,schools:[],members:[],head:state.staff[0]?.id||""});renderSettings()};
+document.getElementById("createBtn").onclick=createBulk;document.getElementById("autoBtn").onclick=autoAssign;
+document.getElementById("confirmBtn").onclick=()=>{let n=Object.values(state.slots).reduce((a,s)=>a+(s.autoStaff||[]).length,0);if(confirm(`自動で入れた担当${n}人分を確定しますか？`)){Object.values(state.slots).forEach(s=>s.autoStaff=[]);save()}};
+document.getElementById("undoBtn").onclick=()=>{let n=Object.values(state.slots).reduce((a,s)=>a+(s.autoStaff||[]).length,0);if(confirm(`自動で入れた担当${n}人分を取り消しますか？`)){Object.values(state.slots).forEach(s=>{s.staff=(s.staff||[]).filter(id=>!(s.autoStaff||[]).includes(id));s.autoStaff=[]});save()}};
+document.getElementById("exportBtn").onclick=()=>{let dates=allDates(),rows=[["校舎",...dates.map(dateToMD)]];for(let c of state.campuses){let a=[c.name],b=[""];for(let d of dates){let s=state.slots[key(c.id,d)];a.push(s?[s.time,(s.staff||[]).map(id=>state.staff.find(x=>x.id===id)?.name||id).join("　")].filter(Boolean).join("　"):"");let inf=s?calc(c,s,d):null;b.push(s?[inf.names.join("/"),inf.count].filter(Boolean).join(" "):"")}rows.push(a,b)}let csv=rows.map(r=>r.map(x=>`"${String(x??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");let blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`自習教室配置_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.csv`;a.click();URL.revokeObjectURL(a.href)};
+load();document.getElementById("supabaseUrl").value=localStorage.getItem("sb_url")||"";document.getElementById("supabaseKey").value=localStorage.getItem("sb_key")||"";
+// Shared Supabase mode. This no-login starter uses public read/write policies;
+// only use with non-sensitive test data until a protected server-side API is added.
+let sharedClient=null, sharedChannel=null, applyingRemote=false, pushTimer=null;
+const originalSave=save;
+save=function(){
+  originalSave();
+  if(sharedClient && !applyingRemote){
+    clearTimeout(pushTimer);
+    pushTimer=setTimeout(async()=>{
+      try{
+        const payload=JSON.parse(JSON.stringify(state));
+        const {error}=await sharedClient.from("app_state").upsert({id:1,payload,updated_at:new Date().toISOString()},{onConflict:"id"});
+        if(error) throw error;
+        document.getElementById("connectStatus").textContent="共有DBに保存しました。";
+      }catch(e){
+        document.getElementById("connectStatus").textContent="共有DBへの保存に失敗："+(e.message||e);
+      }
+    },500);
+  }
+};
+async function connectShared(){
+  const u=document.getElementById("supabaseUrl").value.trim();
+  const k=document.getElementById("supabaseKey").value.trim();
+  const status=document.getElementById("connectStatus");
+  if(!u||!k){status.textContent="Supabase URLとanon keyを入力してください。";return;}
+  if(!window.supabase || !window.supabase.createClient){status.textContent="Supabaseライブラリを読み込めません。ネット接続を確認して再読み込みしてください。";return;}
+  localStorage.setItem("sb_url",u);localStorage.setItem("sb_key",k);
+  status.textContent="共有DBに接続中…";
+  try{
+    if(sharedChannel && sharedClient){await sharedClient.removeChannel(sharedChannel);sharedChannel=null;}
+    sharedClient=window.supabase.createClient(u,k);
+    const {data,error}=await sharedClient.from("app_state").select("payload").eq("id",1).maybeSingle();
+    if(error) throw error;
+    if(data && data.payload && data.payload.rules && data.payload.campuses){
+      applyingRemote=true;state=data.payload;state.updated=data.payload.updated||new Date().toISOString();
+      localStorage.setItem("jishukyoshitsu_v1",JSON.stringify(state));renderAll();
+      applyingRemote=false;
+    }else{
+      const payload=JSON.parse(JSON.stringify(state));
+      const {error:writeError}=await sharedClient.from("app_state").upsert({id:1,payload,updated_at:new Date().toISOString()},{onConflict:"id"});
+      if(writeError) throw writeError;
+    }
+    sharedChannel=sharedClient.channel("app-state-live").on("postgres_changes",{event:"*",schema:"public",table:"app_state",filter:"id=eq.1"},(event)=>{
+      if(event.new && event.new.payload && event.new.payload.rules && event.new.payload.campuses){
+        applyingRemote=true;state=event.new.payload;state.updated=event.new.updated_at||new Date().toISOString();
+        localStorage.setItem("jishukyoshitsu_v1",JSON.stringify(state));renderAll();
+        applyingRemote=false;
+      }
+    }).subscribe((statusValue)=>{
+      if(statusValue==="SUBSCRIBED"){
+        document.getElementById("modeBadge").textContent="共有モード（ログインなし）";
+        status.textContent="共有DBに接続しました。別端末にも反映されます。";
+      }else if(statusValue==="CHANNEL_ERROR"||statusValue==="TIMED_OUT"){
+        status.textContent="リアルタイム同期ができません。SupabaseのRealtime設定とSQLを確認してください。";
+      }
+    });
+  }catch(e){sharedClient=null;applyingRemote=false;status.textContent="接続できませんでした："+(e.message||e)+"。SQLとURL・anon keyを確認してください。";}
+}
+document.getElementById("connectBtn").onclick=connectShared;
+const savedUrl=localStorage.getItem("sb_url")||"",savedKey=localStorage.getItem("sb_key")||"";
+document.getElementById("supabaseUrl").value=savedUrl;document.getElementById("supabaseKey").value=savedKey;
+document.getElementById("modeBadge").textContent="デモモード（未接続）";
+save();
+if(savedUrl && savedKey){connectShared();}
+</script>
+</body></html>
